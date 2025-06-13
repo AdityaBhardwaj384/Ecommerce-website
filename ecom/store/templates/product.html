@@ -1,0 +1,161 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="product-page-container">
+    <div class="product-page-card">
+        <div class="product-page-image">
+            <img src="{{ product.image.url }}" alt="{{ product.name }}">
+        </div>
+        <div class="product-page-info">
+            <h1>{{ product.name }}</h1>
+            <p class="price">₹{{ product.price }}</p>
+            <ul class="product-description">
+                {% for line in product.description.splitlines %}
+                <li>{{ line }}</li>
+                {% empty %}
+                <li>{{ product.description|linebreaksbr }}</li>
+                {% endfor %}
+            </ul>
+            <div class="product-actions">
+                <button class="add-cart-btn" value="{{ product.id }}" id="add-to-cart">Add to Cart</button>
+                <a href="{% url 'home' %}" class="back-btn">← Back to Store</a>
+            </div>
+            <div class="product-quantity-controls" id="qty-controls" style="margin-top: 15px; display: none;">
+                <button class="qty-btn" id="minus-btn">−</button>
+                <input type="number" id="current-qty" class="qty-input" value="1" min="1" max="{{ product.stock }}" />
+                <button class="qty-btn" id="plus-btn">+</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const productId = "{{ product.id }}";
+    const maxQty = {{ product.quantity }};
+    let currentQty = 1;
+
+    // Display messages inline instead of alerts
+    function showMessage(type, text) {
+        let msgBox = document.getElementById('message-box');
+        if (!msgBox) {
+            msgBox = document.createElement('div');
+            msgBox.id = 'message-box';
+            msgBox.style.margin = '1rem 0';
+            msgBox.style.padding = '0.75rem';
+            msgBox.style.borderRadius = '8px';
+            msgBox.style.textAlign = 'center';
+            document.querySelector('.product-actions').prepend(msgBox);
+        }
+
+        msgBox.style.backgroundColor = type === 'error' ? '#f8d7da' : '#d4edda';
+        msgBox.style.color = type === 'error' ? '#721c24' : '#155724';
+        msgBox.textContent = text;
+
+        setTimeout(() => msgBox.remove(), 3000);
+    }
+
+    document.getElementById('add-to-cart').addEventListener('click', function (e) {
+        e.preventDefault();
+
+        $.ajax({
+            type: 'POST',
+            url: '{% url "cart_add" %}',
+            data: {
+                product_id: productId,
+                csrfmiddlewaretoken: '{{ csrf_token }}',
+                action: 'post'
+            },
+            success: function (json) {
+                document.getElementById('cart-count').textContent = json.qty;
+                updateUI();
+            },
+            error: function (xhr) {
+                showMessage('error', xhr.responseJSON?.error || 'Something went wrong!');
+            }
+        });
+    });
+
+    function updateUI() {
+        document.querySelector('.product-actions').innerHTML = `
+            <div class="qty-container">
+                <button class="qty-btn" id="minus-btn">−</button>
+                <input type="number" id="current-qty" class="qty-input" value="${currentQty}" min="1" max="${maxQty}" />
+                <button class="qty-btn" id="plus-btn">+</button>
+                <button class="qty-btn confirm-btn" id="confirm-btn" style="background-color:#28a745; color:#ffffff; width:70px; padding: 25px 20px;">Add</button>
+                <a href="{% url 'home' %}" class="back-btn">← Back to Store</a>
+            </div>
+        `;
+
+            
+        const plusBtn = document.getElementById('plus-btn');
+        const minusBtn = document.getElementById('minus-btn');
+        const qtyInput = document.getElementById('current-qty');
+
+        function updatePlusButtonState() {
+            plusBtn.disabled = currentQty >= maxQty;
+        }
+
+        plusBtn.addEventListener('click', () => {
+            if (currentQty < maxQty) {
+                currentQty += 1;
+                qtyInput.value = currentQty;
+                updatePlusButtonState();
+            }
+        });
+
+        minusBtn.addEventListener('click', () => {
+            if (currentQty > 1) {
+                currentQty -= 1;
+                qtyInput.value = currentQty;
+                updatePlusButtonState();
+            }
+        });
+
+        qtyInput.addEventListener('change', function () {
+            let newQty = parseInt(this.value);
+            if (isNaN(newQty) || newQty < 1) newQty = 1;
+            if (newQty > maxQty) newQty = maxQty;
+            currentQty = newQty;
+            this.value = currentQty;
+            updatePlusButtonState();
+        });
+
+        updatePlusButtonState(); // initial state
+        document.getElementById('confirm-btn').addEventListener('click', confirmQuantity);
+    }
+
+    function confirmQuantity() {
+        $.ajax({
+            type: 'POST',
+            url: '/cart/update/',
+            data: {
+                product_id: productId,
+                quantity: currentQty,
+                csrfmiddlewaretoken: '{{ csrf_token }}'
+            },
+            success: function (json) {
+                updateQtyUI(currentQty, json.qty);
+                $('#qty-' + productId).text(currentQty);
+                showMessage('success', 'Quantity updated in cart!');
+            },
+            error: function (xhr) {
+                showMessage('error', xhr.responseJSON?.error || 'Failed to update cart');
+            }
+        });
+    }
+
+    function updateQtyUI(inputQty, cartTotalQty) {
+        document.getElementById('current-qty').value = inputQty;
+        const cartCountEl = document.getElementById('cart-count');
+        if (cartCountEl) {
+            cartCountEl.textContent = cartTotalQty;
+            cartCountEl.style.transition = 'all 0.3s';
+            cartCountEl.style.color = '#28a745';
+            setTimeout(() => {
+                cartCountEl.style.color = '';
+            }, 500);
+        }
+    }
+</script>
+
+{% endblock %}

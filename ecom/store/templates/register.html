@@ -1,0 +1,67 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="register-container">
+    <form action="{% url 'register' %}" method="POST" class="register-form">
+        {% csrf_token %}
+        <h2>Register</h2>
+
+        <!-- Username Field -->
+        <div class="form-group">
+            <label for="{{ form.username.id_for_label }}">Username</label>
+            <div class="input-help-wrapper">
+                {{ form.username }}
+            </div>
+            <small class="form-help">{{ form.username.help_text }}</small>
+        </div>
+
+        <!-- Email Field -->
+        <div class="form-group">
+            <label for="{{ form.email.id_for_label }}">Email</label>
+            <div class="input-help-wrapper">
+                {{ form.email }}
+            </div>
+        </div>
+
+        <!-- First Name Field -->
+        <div class="form-group">
+            <label for="{{ form.first_name.id_for_label }}">First Name</label>
+            <div class="input-help-wrapper">
+                {{ form.first_name }}
+            </div>
+        </div>
+
+        <!-- Last Name Field -->
+        <div class="form-group">
+            <label for="{{ form.last_name.id_for_label }}">Last Name</label>
+            <div class="input-help-wrapper">
+                {{ form.last_name }}
+            </div>
+        </div>
+
+        <!-- Password1 Field -->
+        <div class="form-group">
+            <label for="{{ form.password1.id_for_label }}">Password</label>
+            <div class="input-help-wrapper">
+                {{ form.password1 }}
+            </div>
+            <small class="form-help">{{ form.password1.help_text }}</small>
+        </div>
+
+        <!-- Password2 Field -->
+        <div class="form-group">
+            <label for="{{ form.password2.id_for_label }}">Confirm Password</label>
+            <div class="input-help-wrapper">
+                {{ form.password2 }}
+            </div>
+            <small class="form-help">{{ form.password2.help_text }}</small>
+        </div>
+
+        <br>
+        <button type="submit">Register</button>
+
+        <p class="login-link">Already have an account? <a href="{% url 'login' %}">Login</a></p>
+        
+    </form>
+</div>
+{% endblock %}

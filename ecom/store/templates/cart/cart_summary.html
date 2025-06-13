@@ -1,0 +1,134 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="cart-container">
+    <h1>Your Shopping Cart</h1>
+
+    {% if cart_products %}
+        <table class="cart-table">
+            <thead>
+                <tr>
+                    <th>Product</th>
+                    <th>Image</th>
+                    <th>Price</th>
+                    <th>Quantity</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in cart_products %}
+                <tr>
+                    <td>{{ item.product.name }}</td>
+                    <td>
+                        <img src="{{ item.product.image.url }}" alt="{{ item.product.name }}" class="cart-image">
+                    </td>
+                    <td>₹{{ item.price }}</td>
+                    <td>
+                        <div class="qty-actions" data-product-id="{{ item.product_id }}">
+                            <button class="qty-btn decrease">−</button>
+                            <span class="qty-number" id="qty-{{ item.product_id }}">{{ item.qty }}</span>
+                            <button class="qty-btn increase">+</button>
+                            <button class="qty-btn remove">🗑</button>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+            <tfoot>
+                <tr>
+                    <td colspan="2"><strong>Total</strong></td>
+                    <td colspan="2"><strong id="total-amount">₹{{ total_price }}</strong></td>
+                </tr>
+            </tfoot>
+        </table>
+    {% else %}
+        <p>Your cart is empty.</p>
+    {% endif %}
+</div>
+
+<style>
+.cart-container {
+    max-width: 800px;
+    margin: 2rem auto;
+    padding: 1rem;
+}
+.cart-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+.cart-table th,
+.cart-table td {
+    border: 2px solid #333;
+    padding: 0.75rem;
+    text-align: center;
+}
+.cart-image {
+    max-width: 60px;
+    height: auto;
+}
+</style>
+
+<script>
+    document.querySelectorAll('.qty-actions').forEach(container => {
+        const productId = container.dataset.productId;
+
+        container.querySelector('.increase').addEventListener('click', () => {
+            updateCart(productId, 'increase');
+        });
+
+        container.querySelector('.decrease').addEventListener('click', () => {
+            updateCart(productId, 'decrease');
+        });
+
+        container.querySelector('.remove').addEventListener('click', () => {
+            updateCart(productId, 'remove');
+        });
+    });
+
+    function updateCart(productId, action) {
+        $.ajax({
+            type: 'POST',
+            url: `/cart/${action}/`,
+            data: {
+                product_id: productId,
+                csrfmiddlewaretoken: '{{ csrf_token }}'
+            },
+            success: function (json) {
+                if (json.qty === 0 || action === 'remove') {
+                    document.getElementById(`qty-${productId}`).closest('tr').remove();
+                } else {
+                    document.getElementById(`qty-${productId}`).textContent = json.qty;
+                }
+            
+                document.getElementById('cart-count').textContent = json.cart_total_qty;
+            
+                const totalPriceEl = document.getElementById('total-amount');
+                if (totalPriceEl) {
+                    totalPriceEl.style.transition = 'color 0.3s ease';
+                    totalPriceEl.style.color = '#28a745';
+                    totalPriceEl.textContent = `₹${json.cart_total_price}`;
+                    setTimeout(() => {
+                        totalPriceEl.style.color = '';
+                    }, 500);
+                }
+            },
+            error: function (xhr) {
+                alert(xhr.responseJSON?.error || 'Something went wrong');
+            }
+        });
+    }
+
+    function updateTotal() {
+        let total = 0;
+        document.querySelectorAll('.qty-number').forEach(span => {
+            const qty = parseInt(span.textContent);
+            const row = span.closest('tr');
+            const priceText = row.querySelector('td:nth-child(3)').textContent.replace(/[^\d.]/g, '');
+            const price = parseFloat(priceText);
+            if (!isNaN(price) && !isNaN(qty)) {
+                total += price * qty;
+            }
+        });
+        document.getElementById('total-amount').textContent = '₹' + total.toFixed(2);
+    }
+</script>
+{% endblock %}

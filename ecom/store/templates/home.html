@@ -1,0 +1,25 @@
+{% extends 'base.html' %} 
+
+{% block content %}
+<header>
+    <h1>My E-Commerce Store</h1>
+</header>
+
+<main>
+    <div class="product-container">
+        {% for product in products %}
+        <div class="card">
+            <div class="image-container"> 
+                <img src="{{ product.image.url }}" alt="{{ product.name }}">
+            </div>
+            <div class="product-info">
+                <h2>{{ product.name }}</h2>
+                <p class="price">₹{{ product.price }}</p>
+                <div class="view-btn"><a href="{% url 'product' product.id %}">View Product </a></div>
+                <button onclick="addToCart('{{ product.id }}')">Add to Cart</button>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</main>
+{% endblock %}
